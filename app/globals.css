@@ -1,26 +1,89 @@
 @import "tailwindcss";
 
+/* 1. 색상 값 정의 (CSS Variables) */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+    /* --- Light Mode --- */
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+    /* Background: 바닥과 종이(카드) 구분 */
+    --background-default: #F8FAFC; /* Slate-50: 전체 페이지 배경 */
+    --background-paper: #FFFFFF; /* White: 카드, 모달, 사이드바 배경 */
+
+    /* Text: 중요도에 따른 구분 */
+    --text-primary: #1E293B; /* Slate-800: 본문, 제목 */
+    --text-secondary: #64748B; /* Slate-500: 부가 설명, 라벨 */
+    --text-disabled: #94A3B8; /* Slate-400: 비활성 텍스트 */
+
+    /* Divider: 구획 나누기 */
+    --divider: #E2E8F0; /* Slate-200: 연한 테두리 */
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+    :root {
+        /* --- Dark Mode --- */
+
+        /* 다크모드는 paper가 default보다 살짝 밝아야 입체감이 듭니다 (Elevation) */
+        --background-default: #121212; /* 완전 어두운 배경 */
+        --background-paper: #1E1E1E; /* 살짝 떠있는 느낌의 배경 */
+
+        --text-primary: #F1F5F9; /* Slate-100 */
+        --text-secondary: #94A3B8; /* Slate-400 */
+        --text-disabled: #475569; /* Slate-600 */
+
+        --divider: #334155; /* Slate-700: 어두운 테두리 */
+    }
 }
 
+/* 2. Tailwind 유틸리티 매핑 (@theme) */
+@theme {
+    /* --- MUI Semantic Colors --- */
+    /* Background */
+    --color-background-default: var(--background-default);
+    --color-background-paper: var(--background-paper);
+
+    /* Text (사용시 text-text-primary 형태가 됨) */
+    --color-text-primary: var(--text-primary);
+    --color-text-secondary: var(--text-secondary);
+    --color-text-disabled: var(--text-disabled);
+
+    /* Divider */
+    --color-divider: var(--divider);
+
+
+    /* --- Palette (Main/Light/Dark) --- */
+    /* Primary: 파스텔 블루 */
+    --color-primary-light: #bfdbfe;        /* blue-200 */
+    --color-primary-main: #93c5fd;         /* blue-300 */
+    --color-primary-dark: #60a5fa;         /* blue-400 */
+    --color-primary-contrastText: #ffffff; /* slate-900 */
+    /* Secondary: 파스텔 옐로우 */
+    --color-secondary-light: #fef9c3;      /* yellow-100 */
+    --color-secondary-main: #fde047;       /* yellow-300 */
+    --color-secondary-dark: #facc15;       /* yellow-400 */
+    --color-secondary-contrastText: #451a03; /* amber-950 */
+    /* Functional Colors (기존 유지) */
+    --color-success-light: #4ade80;
+    --color-success-main: #22c55e;
+    --color-success-dark: #15803d;
+    --color-success-contrastText: #ffffff;
+
+    --color-warning-light: #fb923c;
+    --color-warning-main: #f97316;
+    --color-warning-dark: #c2410c;
+    --color-warning-contrastText: #ffffff;
+
+    --color-error-light: #f87171;
+    --color-error-main: #ef4444;
+    --color-error-dark: #b91c1c;
+    --color-error-contrastText: #ffffff;
+
+    --color-info-light: #38bdf8;
+    --color-info-main: #0ea5e9;
+    --color-info-dark: #0369a1;
+    --color-info-contrastText: #ffffff;
+}
+
+/* 3. 기본 스타일 적용 */
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+    background-color: var(--background-default);
+    color: var(--text-primary);
 }

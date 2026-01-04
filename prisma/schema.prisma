@@ -1,0 +1,210 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------
+// 👤 사용자 (User)
+// ---------------------------------------------------------
+model User {
+  id       String  @id @default(auto()) @map("_id") @db.ObjectId
+  email    String  @unique
+  password String
+  name     String?
+
+  // 관계 설정
+  bankAccounts       BankAccount[]
+  investmentAccounts InvestmentAccount[]
+  cards              Card[]
+  categories         Category[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ---------------------------------------------------------
+// 💳 카드 (Card) - NEW!
+// ---------------------------------------------------------
+model Card {
+  id   String   @id @default(auto()) @map("_id") @db.ObjectId
+  name String // 예: 현대카드 M3, 카카오 체크
+  type CardType // CREDIT(신용), CHECK(체크)
+
+  currentBalance Float @default(0)
+
+  limit       Float? // 신용 한도 (선택)
+  paymentDate Int? // 결제일 (예: 14, 25 등)
+
+  // 체크카드인 경우 연결된 계좌 (신용카드도 결제 계좌로 연결 가능)
+  linkedBankAccountId String?      @db.ObjectId
+  linkedBankAccount   BankAccount? @relation(fields: [linkedBankAccountId], references: [id])
+
+  userId String @db.ObjectId
+  user   User   @relation(fields: [userId], references: [id])
+
+  // 이 카드로 결제한 내역들
+  transactions MoneyTransaction[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum CardType {
+  CREDIT // 신용카드 (부채 발생)
+  CHECK // 체크카드 (즉시 출금)
+}
+
+// ---------------------------------------------------------
+// 🏦 은행/현금 계좌 (BankAccount)
+// ---------------------------------------------------------
+model BankAccount {
+  id   String   @id @default(auto()) @map("_id") @db.ObjectId
+  name String // 예: 월급통장, 비상금지갑
+  type BankType // CHECKING(입출금), SAVINGS(예적금), CASH(현금)
+
+  currentBalance Float @default(0) // 현재 잔액
+
+  userId String @db.ObjectId
+  user   User   @relation(fields: [userId], references: [id])
+
+  // 관계
+  transactions MoneyTransaction[] // 이 계좌의 입출금 내역
+  linkedCards  Card[] // 이 계좌에 연결된 카드들
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum BankType {
+  CHECKING // 수시 입출금
+  SAVINGS // 예적금 (저축성)
+  CASH // 현금 지갑
+}
+
+// ---------------------------------------------------------
+// 💸 가계부 거래 내역 (MoneyTransaction)
+// ---------------------------------------------------------
+// 은행 계좌의 입출금 OR 신용카드 지출 내역을 통합 관리
+model MoneyTransaction {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  type        TxType // INCOME, EXPENSE, TRANSFER
+  amount      Float
+  date        DateTime
+  description String?
+
+  // 1. 어디서 돈이 나갔는가? (은행 계좌 or 현금)
+  bankAccountId String?      @db.ObjectId
+  bankAccount   BankAccount? @relation(fields: [bankAccountId], references: [id], onDelete: Cascade)
+
+  // 2. 어떤 카드로 긁었는가? (선택 사항)
+  cardId String? @db.ObjectId
+  card   Card?   @relation(fields: [cardId], references: [id])
+
+  // 3. 어떤 분류인가?
+  categoryId String?   @db.ObjectId
+  category   Category? @relation(fields: [categoryId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum TxType {
+  INCOME // 수입
+  EXPENSE // 지출
+  TRANSFER // 이체 (내 계좌간 이동)
+}
+
+// ---------------------------------------------------------
+// 🏷 카테고리 (Category)
+// ---------------------------------------------------------
+model Category {
+  id   String @id @default(auto()) @map("_id") @db.ObjectId
+  name String
+  type TxType // INCOME, EXPENSE
+
+  userId String @db.ObjectId
+  user   User   @relation(fields: [userId], references: [id])
+
+  transactions MoneyTransaction[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ---------------------------------------------------------
+// 📈 투자 계좌 (InvestmentAccount)
+// ---------------------------------------------------------
+model InvestmentAccount {
+  id         String     @id @default(auto()) @map("_id") @db.ObjectId
+  name       String // 예: 키움증권, 업비트
+  detailType InvestType // STOCK, COIN, REAL_ESTATE
+
+  currentValuation Float @default(0) // 현재 평가금 (Market Value)
+  totalPrincipal   Float @default(0) // 총 투입 원금 (Principal)
+
+  userId String @db.ObjectId
+  user   User   @relation(fields: [userId], references: [id])
+
+  snapshots InvestmentSnapshot[] // 일별 자산 추이
+  logs      InvestmentLog[] // 시드머니 입출금 기록
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum InvestType {
+  STOCK // 주식
+  COIN // 코인
+  REAL_ESTATE // 부동산
+  BOND // 채권
+  PENSION_SAVINGS // 연금저축
+  IRP // IRP (퇴직연금)
+  ISA // ISA (개인종합자산관리계좌)
+  ETC // 기타
+}
+
+// 일별 평가금 기록 (차트용 데이터)
+model InvestmentSnapshot {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  date           DateTime
+  totalValue     Float // 그 날의 평가금
+  totalPrincipal Float // 그 날 기준 원금 (수익률 계산용)
+
+  investmentAccountId String            @db.ObjectId
+  investmentAccount   InvestmentAccount @relation(fields: [investmentAccountId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([investmentAccountId, date]) // 같은 날짜 중복 방지
+}
+
+// 투자 원금 변동 기록 (예수금 입출금)
+model InvestmentLog {
+  id     String        @id @default(auto()) @map("_id") @db.ObjectId
+  type   InvestLogType // DEPOSIT(투입), WITHDRAW(회수)
+  amount Float
+  date   DateTime
+  note   String?
+
+  investmentAccountId String            @db.ObjectId
+  investmentAccount   InvestmentAccount @relation(fields: [investmentAccountId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum InvestLogType {
+  DEPOSIT // 투자금 투입 (시드 증가)
+  WITHDRAW // 투자금 회수 (시드 감소)
+}
