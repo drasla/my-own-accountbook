@@ -12,7 +12,7 @@ import {
     createBankAccountAction,
     createInvestmentAccountAction,
     createCardAction,
-} from "@/app/actions/create_assets";
+} from "@/actions/create_assets";
 import { BankType, InvestType, CardType } from "@prisma/client";
 import { Tab } from "@/components/Tab";
 
@@ -28,6 +28,7 @@ interface AssetFormInputs {
     detailType?: string;
     currentValuation?: number;
     paymentDate?: number;
+    accountOpenDate?: string;
 }
 
 type AssetTab = "BANK" | "INVESTMENT" | "CARD";
@@ -41,11 +42,17 @@ export default function CreateAssetModal({ isOpen, onClose }: Props) {
         reset,
         control, // ✅ control 가져오기
         formState: { isSubmitting, errors },
-    } = useForm<AssetFormInputs>();
+    } = useForm<AssetFormInputs>({
+        defaultValues: {
+            accountOpenDate: new Date().toISOString().split("T")[0],
+        },
+    });
 
     const handleTabChange = (type: AssetTab) => {
         setAssetType(type);
-        reset();
+        reset({
+            accountOpenDate: new Date().toISOString().split("T")[0],
+        });
     };
 
     const onSubmit: SubmitHandler<AssetFormInputs> = async data => {
@@ -64,6 +71,7 @@ export default function CreateAssetModal({ isOpen, onClose }: Props) {
                     name: data.name,
                     detailType: data.detailType as InvestType,
                     currentValuation: Number(data.currentValuation) || 0,
+                    accountOpenDate: data.accountOpenDate,
                 });
             } else {
                 result = await createCardAction({
@@ -167,6 +175,13 @@ export default function CreateAssetModal({ isOpen, onClose }: Props) {
                                     helperText={errors.detailType?.message}
                                 />
                             )}
+                        />
+
+                        <Input
+                            label="계좌 개설일"
+                            type="date"
+                            helperText="연평균 수익률(CAGR) 계산의 기준일이 됩니다."
+                            {...register("accountOpenDate", { required: "개설일을 입력해주세요." })}
                         />
 
                         <Input

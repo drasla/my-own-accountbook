@@ -6,8 +6,8 @@ import Modal from "@/components/Modal";
 import Input from "@/components/Input";
 import Select from "@/components/Select"; // ✅ Custom Component 사용
 import Button from "@/components/Button";
-import { getPaymentMethodsAction, PaymentMethod } from "@/app/actions/payment";
-import { createExpenseAction } from "@/app/actions/transaction";
+import { getPaymentMethodsAction, PaymentMethod } from "@/actions/payment";
+import { createExpenseAction } from "@/actions/transaction";
 import toast from "react-hot-toast";
 
 interface Props {

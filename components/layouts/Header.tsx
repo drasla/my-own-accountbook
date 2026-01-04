@@ -1,6 +1,6 @@
 "use client";
 
-import { logoutAction } from "@/app/actions/auth";
+import { logoutAction } from "@/actions/auth";
 import Button from "@/components/Button"; // 이전에 만든 로그아웃 액션
 import { MdLogout, MdMenu, MdPerson } from "react-icons/md";
 

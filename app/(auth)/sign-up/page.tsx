@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Input from "@/components/Input";
 import Button from "@/components/Button";
-import { signUpAction } from "@/app/actions/auth";
+import { signUpAction } from "@/actions/auth";
 import toast from "react-hot-toast"; // 작성해주신 Server Action
 
 // Prisma Schema의 User 모델 + 확인용 비밀번호

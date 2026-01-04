@@ -5,7 +5,7 @@ import toast from "react-hot-toast";
 import Modal from "@/components/Modal";
 import Input from "@/components/Input";
 import Button from "@/components/Button";
-import { recordDailySnapAction } from "@/app/actions/investment";
+import { recordDailySnapAction } from "@/actions/investment";
 
 interface Inputs {
     date: string;

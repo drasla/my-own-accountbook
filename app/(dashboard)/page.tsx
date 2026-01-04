@@ -3,13 +3,9 @@
 import { useState, useEffect, ElementType, ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import Button from "@/components/Button";
-import { getDashboardData } from "@/app/actions/dashboard";
-
-// 모달
+import { getDashboardData } from "@/actions/dashboard";
 import CreateAssetModal from "@/components/asset/CreateAssetModal";
-import AddExpenseModal from "@/components/transaction/AddExpenseModal"; // 앞서 만든 지출 모달
-
-// 아이콘
+import AddExpenseModal from "@/components/transaction/AddExpenseModal";
 import {
     MdRefresh,
     MdAccountBalance,
@@ -20,7 +16,7 @@ import {
     MdRemoveCircleOutline,
 } from "react-icons/md";
 import { DashboardData } from "@/types";
-import { BankType } from "@prisma/client";
+import { twMerge } from "tailwind-merge";
 
 export default function DashboardPage() {
     const router = useRouter();
@@ -28,6 +24,8 @@ export default function DashboardPage() {
     // 데이터 상태
     const [data, setData] = useState<DashboardData>({
         totalAssets: 0,
+        totalIncome: 0,
+        totalExpense: 0,
         bankAccounts: [],
         investmentAccounts: [],
         cards: [],
@@ -53,16 +51,25 @@ export default function DashboardPage() {
         new Intl.NumberFormat("ko-KR", { style: "currency", currency: "KRW" }).format(amount);
 
     return (
-        <div className="max-w-5xl mx-auto space-y-8 pb-10">
+        <div className={twMerge(["max-w-5xl", "mx-auto", "space-y-8", "pb-10"])}>
             {/* 1. 상단 헤더 & 액션 버튼 */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div
+                className={twMerge(
+                    ["flex", "flex-col", "justify-between", "gap-4"],
+                    ["md:flex-row", "md:items-center"],
+                )}>
                 <div>
                     <h2 className="text-2xl font-bold text-text-primary">대시보드</h2>
                     <p className="text-text-secondary">나의 자산 현황입니다.</p>
                 </div>
 
                 <div className="flex gap-2">
-                    <Button variant="text" color="secondary" onClick={fetchData} className="px-3">
+                    <Button
+                        variant="text"
+                        color="secondary"
+                        size={"sm"}
+                        onClick={fetchData}
+                        className="px-3">
                         <MdRefresh size={24} className={isLoading ? "animate-spin" : ""} />
                     </Button>
 
@@ -70,6 +77,7 @@ export default function DashboardPage() {
                     <Button
                         variant="outlined"
                         color="error"
+                        size={"sm"}
                         onClick={() => setIsExpenseModalOpen(true)}
                         className="gap-2">
                         <MdRemoveCircleOutline size={20} />
@@ -77,7 +85,7 @@ export default function DashboardPage() {
                     </Button>
 
                     {/* 🏦 자산 추가 버튼 */}
-                    <Button onClick={() => setIsAssetModalOpen(true)} className="gap-2">
+                    <Button onClick={() => setIsAssetModalOpen(true)} size={"sm"} className="gap-2">
                         <MdAdd size={20} />
                         자산 추가
                     </Button>
@@ -85,12 +93,17 @@ export default function DashboardPage() {
             </div>
 
             {/* 2. 총 자산 카드 */}
-            <div className="bg-background-paper p-8 rounded-2xl border border-divider shadow-sm flex flex-col md:flex-row justify-between items-center gap-4">
+            <div
+                className={twMerge(
+                    ["p-8"],
+                    ["flex", "flex-col", "md:flex-row", "justify-between", "items-center", "gap-4"],
+                    ["bg-background-paper", "rounded-2xl", "border", "border-divider"],
+                )}>
                 <div>
-                    <h3 className="text-sm font-medium text-text-secondary">
+                    <h3 className={twMerge(["text-sm", "font-medium", "text-text-secondary"])}>
                         총 순자산 (현금 + 투자)
                     </h3>
-                    <p className="text-4xl font-bold text-primary-main mt-2">
+                    <p className={twMerge(["text-4xl", "font-bold", "text-primary-main", "mt-2"])}>
                         {isLoading ? "..." : formatCurrency(data.totalAssets)}
                     </p>
                 </div>
@@ -221,22 +234,38 @@ function AssetCard({
     return (
         <div
             onClick={onClick}
-            className="bg-background-paper p-5 rounded-xl border border-divider shadow-sm hover:shadow-md transition-all cursor-pointer active:scale-[0.98]">
-            <div className="flex justify-between items-start mb-4">
-                <div className="flex items-center gap-3">
-                    <div className={`p-2.5 rounded-lg ${iconBg} ${iconColor}`}>
+            className={twMerge(
+                ["p-5", "bg-background-paper"],
+                ["rounded-xl", "border", "border-divider", "hover:shadow-md"],
+                ["transition-all", "cursor-pointer", "active:scale-[0.98]"],
+            )}>
+            <div className={twMerge(["flex", "justify-between", "items-start", "mb-4"])}>
+                <div className={twMerge(["flex", "items-center", "gap-3"])}>
+                    <div className={twMerge(["p-2.5", "rounded-lg", iconBg, iconColor])}>
                         <Icon size={22} />
                     </div>
                     <div>
-                        <h4 className="font-bold text-text-primary line-clamp-1">{title}</h4>
-                        <span className="text-xs text-text-secondary">{subtitle}</span>
+                        <h4 className={twMerge(["font-bold", "text-text-primary", "line-clamp-1"])}>
+                            {title}
+                        </h4>
+                        <span className={twMerge(["text-xs", "text-text-secondary"])}>
+                            {subtitle}
+                        </span>
                     </div>
                 </div>
             </div>
             <div className="text-right">
-                {isDebt && <span className="text-xs text-text-secondary mr-2">사용액</span>}
+                {isDebt && (
+                    <span className={twMerge(["text-xs", "text-text-secondary", "mr-2"])}>
+                        사용액
+                    </span>
+                )}
                 <p
-                    className={`text-lg font-bold ${isDebt ? "text-text-primary" : "text-text-primary"}`}>
+                    className={twMerge([
+                        "text-lg",
+                        "font-bold",
+                        isDebt ? "text-text-primary" : "text-text-primary",
+                    ])}>
                     {formattedAmount}
                 </p>
             </div>

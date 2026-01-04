@@ -27,6 +27,7 @@ model User {
   investmentAccounts InvestmentAccount[]
   cards              Card[]
   categories         Category[]
+  transactions       MoneyTransaction[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -102,17 +103,16 @@ model MoneyTransaction {
   date        DateTime
   description String?
 
-  // 1. 어디서 돈이 나갔는가? (은행 계좌 or 현금)
   bankAccountId String?      @db.ObjectId
   bankAccount   BankAccount? @relation(fields: [bankAccountId], references: [id], onDelete: Cascade)
+  cardId        String?      @db.ObjectId
+  card          Card?        @relation(fields: [cardId], references: [id])
+  categoryId    String?      @db.ObjectId
+  category      Category?    @relation(fields: [categoryId], references: [id])
+  user          User         @relation(fields: [userId], references: [id])
+  userId        String       @db.ObjectId
 
-  // 2. 어떤 카드로 긁었는가? (선택 사항)
-  cardId String? @db.ObjectId
-  card   Card?   @relation(fields: [cardId], references: [id])
-
-  // 3. 어떤 분류인가?
-  categoryId String?   @db.ObjectId
-  category   Category? @relation(fields: [categoryId], references: [id])
+  isTransfer Boolean @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -149,17 +149,19 @@ model InvestmentAccount {
   name       String // 예: 키움증권, 업비트
   detailType InvestType // STOCK, COIN, REAL_ESTATE
 
-  currentValuation Float @default(0) // 현재 평가금 (Market Value)
-  totalPrincipal   Float @default(0) // 총 투입 원금 (Principal)
+  investedAmount     Float @default(0)
+  cumulativeDividend Float @default(0)
+  currentValuation   Float @default(0)
+
+  accountOpenDate DateTime @default(now())
 
   userId String @db.ObjectId
   user   User   @relation(fields: [userId], references: [id])
 
-  snapshots InvestmentSnapshot[] // 일별 자산 추이
-  logs      InvestmentLog[] // 시드머니 입출금 기록
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  investmentSnapshots InvestmentSnapshot[]
+  investmentLogs      InvestmentLog[]
 }
 
 enum InvestType {
@@ -178,7 +180,7 @@ model InvestmentSnapshot {
   id             String   @id @default(auto()) @map("_id") @db.ObjectId
   date           DateTime
   totalValue     Float // 그 날의 평가금
-  totalPrincipal Float // 그 날 기준 원금 (수익률 계산용)
+  investedAmount Float // 그 날 기준 원금 (수익률 계산용)
 
   investmentAccountId String            @db.ObjectId
   investmentAccount   InvestmentAccount @relation(fields: [investmentAccountId], references: [id], onDelete: Cascade)
@@ -192,7 +194,7 @@ model InvestmentSnapshot {
 // 투자 원금 변동 기록 (예수금 입출금)
 model InvestmentLog {
   id     String        @id @default(auto()) @map("_id") @db.ObjectId
-  type   InvestLogType // DEPOSIT(투입), WITHDRAW(회수)
+  type   InvestLogType
   amount Float
   date   DateTime
   note   String?
@@ -207,4 +209,5 @@ model InvestmentLog {
 enum InvestLogType {
   DEPOSIT // 투자금 투입 (시드 증가)
   WITHDRAW // 투자금 회수 (시드 감소)
+  DIVIDEND // 배당금 추가
 }

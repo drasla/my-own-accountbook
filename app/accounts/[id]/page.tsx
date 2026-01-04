@@ -2,12 +2,12 @@
 
 import { useEffect, useState, use } from "react"; // use import 필요
 import { useRouter } from "next/navigation";
-import { getAccountDetail, deleteAccountAction } from "@/app/actions/account";
+import { getAccountDetail, deleteAccountAction } from "@/actions/account";
 import Button from "@/components/Button";
 import { MdArrowBack, MdDelete, MdEdit, MdAdd } from "react-icons/md";
 import toast from "react-hot-toast";
 import Chip from "@/components/Chip";
-import { getInvestmentDetail } from "@/app/actions/investment";
+import { getInvestmentDetail } from "@/actions/investment";
 
 // 타입 정의 (Prisma Schema 기준)
 interface Transaction {

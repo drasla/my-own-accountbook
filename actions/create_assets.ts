@@ -15,6 +15,7 @@ interface CreateInvestInput {
     name: string;
     detailType: InvestType;
     currentValuation: number | string;
+    accountOpenDate?: string;
 }
 
 interface CreateCardInput {
@@ -64,16 +65,36 @@ export async function createInvestmentAccountAction(data: CreateInvestInput) {
 
     try {
         const valuation = Number(data.currentValuation) || 0;
-        const result = await prisma.investmentAccount.create({
-            data: {
-                userId: user.id,
-                name: data.name,
-                detailType: data.detailType,
-                currentValuation: valuation,
-                totalPrincipal: valuation,
-            },
+
+        // ✅ 날짜 변환 (없으면 오늘)
+        const openDate = data.accountOpenDate ? new Date(data.accountOpenDate) : new Date();
+
+        // 트랜잭션으로 처리 (계좌 생성 + 초기 입금 로그)
+        await prisma.$transaction(async tx => {
+            const newAccount = await tx.investmentAccount.create({
+                data: {
+                    userId: user.id,
+                    name: data.name,
+                    detailType: data.detailType,
+                    investedAmount: valuation,
+                    currentValuation: valuation,
+                    accountOpenDate: openDate, // ✅ DB 저장
+                },
+            });
+
+            // 초기 금액이 있으면 로그 남기기 (그래야 입출금 내역에 뜸)
+            if (valuation > 0) {
+                await tx.investmentLog.create({
+                    data: {
+                        investmentAccountId: newAccount.id,
+                        type: "DEPOSIT",
+                        amount: valuation,
+                        date: openDate, // 개설일 기준으로 로그 생성
+                        note: "초기 잔액 설정",
+                    },
+                });
+            }
         });
-        console.log("✅ [Invest] 생성 성공:", result);
 
         revalidatePath("/");
         return { success: true, message: "투자 계좌가 생성되었습니다." };

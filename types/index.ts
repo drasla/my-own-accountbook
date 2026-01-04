@@ -17,9 +17,11 @@ export { BankType, InvestType, CardType };
 // 2. 대시보드 데이터 타입
 export interface DashboardData {
     totalAssets: number;
-    bankAccounts: BankAccount[];
-    investmentAccounts: InvestmentAccount[];
-    cards: Card[];
+    totalIncome: number;
+    totalExpense: number;
+    bankAccounts: any[];
+    investmentAccounts: any[];
+    cards: any[];
 }
 
 // 3. 공통 응답 타입 (Server Action 리턴값)

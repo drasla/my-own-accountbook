@@ -4,7 +4,7 @@ import { useForm, SubmitHandler } from "react-hook-form";
 import Link from "next/link";
 import Input from "@/components/Input";
 import Button from "@/components/Button";
-import { loginAction } from "@/app/actions/auth";
+import { loginAction } from "@/actions/auth";
 import toast from "react-hot-toast"; // 위에서 만든 액션 import
 
 interface SignInInputs {
