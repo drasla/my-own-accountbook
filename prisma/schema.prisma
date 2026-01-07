@@ -41,10 +41,9 @@ model Card {
   name String // 예: 현대카드 M3, 카카오 체크
   type CardType // CREDIT(신용), CHECK(체크)
 
-  currentBalance Float @default(0)
-
-  limit       Float? // 신용 한도 (선택)
-  paymentDate Int? // 결제일 (예: 14, 25 등)
+  currentBalance Float  @default(0)
+  limit          Float? // 신용 한도 (선택)
+  paymentDate    Int? // 결제일 (예: 14, 25 등)
 
   // 체크카드인 경우 연결된 계좌 (신용카드도 결제 계좌로 연결 가능)
   linkedBankAccountId String?      @db.ObjectId

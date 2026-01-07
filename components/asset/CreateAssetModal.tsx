@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm, SubmitHandler, Controller } from "react-hook-form";
 import toast from "react-hot-toast";
 import Modal from "@/components/Modal";
@@ -15,6 +15,7 @@ import {
 } from "@/actions/create_assets";
 import { BankType, InvestType, CardType } from "@prisma/client";
 import { Tab } from "@/components/Tab";
+import { getDashboardData } from "@/actions/dashboard";
 
 interface Props {
     isOpen: boolean;
@@ -29,12 +30,14 @@ interface AssetFormInputs {
     currentValuation?: number;
     paymentDate?: number;
     accountOpenDate?: string;
+    linkedBankAccountId?: string;
 }
 
 type AssetTab = "BANK" | "INVESTMENT" | "CARD";
 
 export default function CreateAssetModal({ isOpen, onClose }: Props) {
     const [assetType, setAssetType] = useState<AssetTab>("BANK");
+    const [bankOptions, setBankOptions] = useState<{ label: string; value: string }[]>([]); // ✅ 은행 목록 상태
 
     const {
         register,
@@ -47,6 +50,18 @@ export default function CreateAssetModal({ isOpen, onClose }: Props) {
             accountOpenDate: new Date().toISOString().split("T")[0],
         },
     });
+
+    useEffect(() => {
+        if (isOpen) {
+            getDashboardData().then(data => {
+                const options = data.bankAccounts.map((b: any) => ({
+                    label: `${b.name} (잔액: ${b.currentBalance.toLocaleString()}원)`,
+                    value: b.id,
+                }));
+                setBankOptions(options);
+            });
+        }
+    }, [isOpen]);
 
     const handleTabChange = (type: AssetTab) => {
         setAssetType(type);
@@ -78,6 +93,7 @@ export default function CreateAssetModal({ isOpen, onClose }: Props) {
                     name: data.name,
                     type: data.type as CardType,
                     paymentDate: data.paymentDate,
+                    linkedBankAccountId: data.linkedBankAccountId,
                 });
             }
 
@@ -214,6 +230,21 @@ export default function CreateAssetModal({ isOpen, onClose }: Props) {
                                     onChange={onChange}
                                     error={!!errors.type}
                                     helperText={errors.type?.message}
+                                />
+                            )}
+                        />
+
+                        <Controller
+                            control={control}
+                            name="linkedBankAccountId"
+                            render={({ field: { onChange, value } }) => (
+                                <Select
+                                    label="결제 계좌 (선택)"
+                                    options={bankOptions}
+                                    placeholder="연동할 계좌를 선택하세요"
+                                    value={value}
+                                    onChange={onChange}
+                                    helperText="카드 대금이 빠져나갈 통장입니다."
                                 />
                             )}
                         />

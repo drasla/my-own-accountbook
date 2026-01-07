@@ -22,6 +22,7 @@ interface CreateCardInput {
     name: string;
     type: CardType;
     paymentDate?: number | string;
+    linkedBankAccountId?: string; // 연결 계좌 ID (선택)
 }
 
 // 1. 은행 계좌 생성
@@ -106,11 +107,8 @@ export async function createInvestmentAccountAction(data: CreateInvestInput) {
 
 // 3. 카드 생성
 export async function createCardAction(data: CreateCardInput) {
-    console.log("🔄 [Card] 생성 요청 데이터:", data);
-
     const user = await getCurrentUser();
     if (!user) {
-        console.error("❌ [Card] 로그인 유저 없음");
         return { success: false, message: "로그인이 필요합니다." };
     }
 
@@ -122,9 +120,9 @@ export async function createCardAction(data: CreateCardInput) {
                 type: data.type,
                 paymentDate: data.paymentDate ? Number(data.paymentDate) : null,
                 currentBalance: 0,
+                linkedBankAccountId: data.linkedBankAccountId || null,
             },
         });
-        console.log("✅ [Card] 생성 성공:", result);
 
         revalidatePath("/");
         return { success: true, message: "카드가 생성되었습니다." };

@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "./user";
 import { revalidatePath } from "next/cache";
+import { InvestType } from "@prisma/client";
 
 export async function getBankAccountDetail(
     accountId: string,
@@ -22,10 +23,10 @@ export async function getBankAccountDetail(
                 // 거래 내역 함께 가져오기 (최신순 정렬)
                 transactions: {
                     where: {
-                      date: {
-                          gte: startDate ? new Date(startDate) : undefined,
-                          lte: endDate ? new Date(endDate) : undefined,
-                      }
+                        date: {
+                            gte: startDate ? new Date(startDate) : undefined,
+                            lte: endDate ? new Date(endDate) : undefined,
+                        },
                     },
                     orderBy: {
                         date: "desc",
@@ -84,8 +85,8 @@ export async function getAllTransferTargets(currentAccountId: string) {
     }
 }
 
-function getInvestLabel(type: string) {
-    const map: any = {
+function getInvestLabel(type: InvestType | string) {
+    const map: Record<string, string> = {
         STOCK: "주식",
         COIN: "코인",
         REAL_ESTATE: "부동산",
