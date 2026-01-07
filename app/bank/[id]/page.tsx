@@ -144,7 +144,7 @@ export default function BankDetailPage({ params }: { params: Promise<{ id: strin
 
     return (
         // 1. 최상위 부모: 패딩 제거 (전체 레이아웃만 잡음)
-        <div className="max-w-3xl mx-auto pb-20">
+        <div className="max-w-3xl mx-auto pb-10">
             {/* 2. 상단 헤더 영역 (개별 패딩 적용) */}
             {/* sticky top-0 등을 추가하면 스크롤 시 상단에 붙게 할 수도 있습니다 */}
             <div className="px-5 py-4 flex items-center justify-between bg-background-default">
@@ -182,11 +182,14 @@ export default function BankDetailPage({ params }: { params: Promise<{ id: strin
                     <div className="mt-6 flex justify-between items-end z-10 relative">
                         <div>
                             <p className="text-sm text-text-secondary">현재 잔액</p>
-                            <p className="text-4xl font-bold">
+                            <p className="text-3xl font-bold">
                                 {formatCurrency(account.currentBalance)}원
                             </p>
                         </div>
-                        <Button onClick={() => setIsTxModalOpen(true)} className="gap-1 shadow-md">
+                        <Button
+                            size={"sm"}
+                            onClick={() => setIsTxModalOpen(true)}
+                            className="gap-1 shadow-md">
                             <MdAdd size={18} /> 거래 추가
                         </Button>
                     </div>

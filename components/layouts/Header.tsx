@@ -1,8 +1,9 @@
 "use client";
 
 import { logoutAction } from "@/actions/auth";
-import Button from "@/components/Button"; // 이전에 만든 로그아웃 액션
-import { MdLogout, MdMenu, MdPerson } from "react-icons/md";
+import Button from "@/components/Button";
+import { MdLogout, MdPerson } from "react-icons/md";
+import { twMerge } from "tailwind-merge";
 
 interface HeaderProps {
     userName?: string | null;
@@ -16,19 +17,27 @@ export default function Header({ userName }: HeaderProps) {
     };
 
     return (
-        <header className="h-16 bg-background-paper border-b border-divider flex items-center justify-between px-4 md:px-8 sticky top-0 z-10">
-            {/* 모바일용 메뉴 버튼 (지금은 모양만) */}
-            <button className="md:hidden p-2 text-text-secondary hover:bg-background-default rounded-md">
-                <MdMenu size={20} />
-            </button>
+        <header
+            className={twMerge(
+                ["sticky", "top-0", "z-40", "h-16", "px-4"],
+                ["flex", "justify-between", "items-center"],
+                ["bg-white/80", "backdrop-blur-md", "border-b", "border-divider"],
+            )}>
+            <h2 className="text-lg font-bold text-text-primary md:hidden">나만의 가계부</h2>
+
+            {/* PC에서는 사이드바가 있으니 좌측 공백 채우기용 (flex-1) */}
+            <div className="hidden md:block flex-1" />
 
             {/* 우측 유저 정보 및 로그아웃 */}
-            <div className="flex items-center gap-4 ml-auto">
-                <div className="flex items-center gap-2 text-sm text-text-primary">
-                    <div className="w-8 h-8 rounded-full bg-secondary-light flex items-center justify-center text-secondary-contrastText">
-                        <MdPerson size={16} />
+            <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 text-sm text-text-primary bg-gray-100 px-3 py-1.5 rounded-full">
+                    <div className="w-6 h-6 rounded-full bg-secondary-light flex items-center justify-center text-secondary-contrastText">
+                        <MdPerson size={14} />
                     </div>
-                    <span className="font-medium hidden sm:block">{userName || "사용자"}님</span>
+                    {/* 모바일 등 좁은 화면에선 이름 숨김 */}
+                    <span className="font-medium hidden sm:block truncate max-w-25">
+                        {userName || "사용자"}님
+                    </span>
                 </div>
 
                 <Button
@@ -36,9 +45,9 @@ export default function Header({ userName }: HeaderProps) {
                     color="error"
                     size="sm"
                     onClick={handleLogout}
-                    className="text-xs">
-                    <MdLogout size={14} className="mr-1" />
-                    로그아웃
+                    className="text-xs px-2 min-w-0">
+                    <MdLogout size={18} />
+                    <span className="hidden sm:inline ml-1">로그아웃</span>
                 </Button>
             </div>
         </header>

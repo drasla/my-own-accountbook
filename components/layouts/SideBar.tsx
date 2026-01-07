@@ -3,28 +3,29 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { twMerge } from "tailwind-merge";
-import { MdAccountBalanceWallet, MdDashboard, MdPieChart, MdSettings } from "react-icons/md";
-
-const MENU_ITEMS = [
-    { name: "대시보드", href: "/", icon: MdDashboard },
-    { name: "자산 관리", href: "/accounts", icon: MdAccountBalanceWallet },
-    { name: "분류 관리", href: "/categories", icon: MdPieChart },
-    { name: "설정", href: "/settings", icon: MdSettings },
-];
+import { NAV_ITEMS } from "@/lib/constants";
 
 export default function Sidebar() {
     const pathname = usePathname();
 
     return (
-        <aside className="w-64 bg-background-paper border-r border-divider h-full flex flex-col hidden md:flex">
-            {/* 로고 영역 */}
-            <div className="h-16 flex items-center px-6 border-b border-divider">
-                <span className="text-xl font-bold text-primary-main">Money Manager</span>
+        <aside
+            className={twMerge(
+                ["hidden", "md:fixed", "md:flex", "flex-col", "w-64", "h-full"],
+                ["bg-background-paper", "border-r", "border-divider"],
+            )}>
+            <div
+                className={twMerge(
+                    ["h-16", "px-6", "flex", "items-center"],
+                    ["border-b", "border-divider"],
+                )}>
+                <h1 className={twMerge(["text-xl", "font-bold", "text-primary-main"])}>
+                    Money Manager
+                </h1>
             </div>
 
-            {/* 메뉴 리스트 */}
-            <nav className="flex-1 p-4 space-y-1">
-                {MENU_ITEMS.map(item => {
+            <nav className={twMerge(["flex-1", "p-4", "space-y-2"])}>
+                {NAV_ITEMS.map(item => {
                     const isActive = pathname === item.href;
                     return (
                         <Link
@@ -37,7 +38,7 @@ export default function Sidebar() {
                                     : "text-text-secondary hover:bg-background-default hover:text-text-primary", // 비활성 상태
                             )}>
                             <item.icon size={18} />
-                            {item.name}
+                            <span>{item.name}</span>
                         </Link>
                     );
                 })}
@@ -45,7 +46,7 @@ export default function Sidebar() {
 
             {/* 하단 정보 (선택 사항) */}
             <div className="p-4 border-t border-divider">
-                <p className="text-xs text-text-disabled">v1.0.0</p>
+                <p className="text-xs text-text-disabled">© 2026 My Account Book</p>
             </div>
         </aside>
     );
