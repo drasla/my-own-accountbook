@@ -1,24 +1,23 @@
 @import "tailwindcss";
 
-/* 1. 색상 값 정의 (CSS Variables) */
-:root {
-    /* --- Light Mode --- */
-
-    /* Background: 바닥과 종이(카드) 구분 */
-    --background-default: #F8FAFC; /* Slate-50: 전체 페이지 배경 */
-    --background-paper: #FFFFFF; /* White: 카드, 모달, 사이드바 배경 */
-
-    /* Text: 중요도에 따른 구분 */
-    --text-primary: #1E293B; /* Slate-800: 본문, 제목 */
-    --text-secondary: #64748B; /* Slate-500: 부가 설명, 라벨 */
-    --text-disabled: #94A3B8; /* Slate-400: 비활성 텍스트 */
-
-    /* Divider: 구획 나누기 */
-    --divider: #E2E8F0; /* Slate-200: 연한 테두리 */
-}
-
-@media (prefers-color-scheme: dark) {
+@layer base {
     :root {
+        /* --- Light Mode --- */
+
+        /* Background: 바닥과 종이(카드) 구분 */
+        --background-default: #F8FAFC; /* Slate-50: 전체 페이지 배경 */
+        --background-paper: #FFFFFF; /* White: 카드, 모달, 사이드바 배경 */
+
+        /* Text: 중요도에 따른 구분 */
+        --text-primary: #1E293B; /* Slate-800: 본문, 제목 */
+        --text-secondary: #64748B; /* Slate-500: 부가 설명, 라벨 */
+        --text-disabled: #94A3B8; /* Slate-400: 비활성 텍스트 */
+
+        /* Divider: 구획 나누기 */
+        --divider: #E2E8F0; /* Slate-200: 연한 테두리 */
+    }
+
+    .dark {
         /* --- Dark Mode --- */
 
         /* 다크모드는 paper가 default보다 살짝 밝아야 입체감이 듭니다 (Elevation) */
@@ -86,4 +85,6 @@
 body {
     background-color: var(--background-default);
     color: var(--text-primary);
+    transition-property: color, background-color, border-color;
+    transition-duration: 300ms;
 }

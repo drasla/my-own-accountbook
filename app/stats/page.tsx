@@ -16,12 +16,15 @@ import {
     YAxis,
     Line,
     Area,
+    AreaChart,
 } from "recharts";
 
 import {
     getInvestmentTrendAction,
     getMonthlyStatsAction,
+    getNetWorthTrendAction,
     InvestmentTrendItem,
+    NetWorthTrendItem,
     StatItem,
 } from "@/actions/stats";
 import { Tabs } from "@/components/Tabs";
@@ -41,15 +44,16 @@ const COLORS = [
     "#D4C1EC", // 라벤더
 ];
 
-type TabType = "EXPENSE" | "INCOME" | "INVESTMENT";
+type TabType = "EXPENSE" | "INCOME" | "INVESTMENT" | "NET_WORTH";
 
 export default function StatsPage() {
     const [currentDate, setCurrentDate] = useState(dayjs());
-    const [activeTab, setActiveTab] = useState<TabType>("EXPENSE");
+    const [activeTab, setActiveTab] = useState<TabType>("NET_WORTH");
 
     // 데이터 상태 분리
     const [pieData, setPieData] = useState<{ totalAmount: number; stats: StatItem[] } | null>(null);
     const [trendData, setTrendData] = useState<InvestmentTrendItem[]>([]);
+    const [netWorthData, setNetWorthData] = useState<NetWorthTrendItem[]>([]);
 
     const [isLoading, setIsLoading] = useState(true);
 
@@ -62,6 +66,10 @@ export default function StatsPage() {
             // 투자 추이 데이터 로드
             const data = await getInvestmentTrendAction(year, month);
             setTrendData(data);
+        } else if (activeTab === "NET_WORTH") {
+            // ✅ 순자산 데이터 로드
+            const data = await getNetWorthTrendAction(year, month);
+            setNetWorthData(data);
         } else {
             // 수입/지출 파이 차트 로드
             const data = await getMonthlyStatsAction(year, month, activeTab as TxType);
@@ -71,7 +79,7 @@ export default function StatsPage() {
     }, [currentDate, activeTab]);
 
     useEffect(() => {
-        fetchData();
+        fetchData().then(() => {});
     }, [fetchData]);
 
     const handlePrevMonth = () => setCurrentDate(currentDate.subtract(1, "month"));
@@ -87,7 +95,7 @@ export default function StatsPage() {
     return (
         <div className="pb-20">
             {/* 1. 헤더 */}
-            <header className="px-5 py-4 bg-background-default sticky top-0 z-10 flex flex-col gap-4">
+            <div className="py-4 bg-background-default sticky top-0 z-10 flex flex-col gap-4">
                 <h1 className="text-xl font-bold text-text-primary">통계</h1>
 
                 <div className="flex items-center justify-between bg-background-paper p-2 rounded-xl border border-divider">
@@ -108,15 +116,102 @@ export default function StatsPage() {
 
                 {/* 탭: 수입 / 지출 / 투자추이 */}
                 <Tabs value={activeTab} onChange={val => setActiveTab(val as TabType)} fullWidth>
+                    <Tab value={"NET_WORTH"} label={"순자산"} />
                     <Tab value="EXPENSE" label="지출" />
                     <Tab value="INCOME" label="수입" />
                     <Tab value="INVESTMENT" label="투자 추이" />
                 </Tabs>
-            </header>
+            </div>
 
-            <div className="px-5 space-y-6 mt-4">
+            <div className="space-y-6 mt-4">
                 {isLoading ? (
                     <div className="py-20 text-center text-text-secondary">로딩 중...</div>
+                ) : activeTab === "NET_WORTH" ? (
+                    // ===============================================
+                    // 💰 [순자산 추이 차트]
+                    // ===============================================
+                    netWorthData.length > 0 ? (
+                        <div className="bg-background-paper p-5 rounded-2xl border border-divider h-[400px]">
+                            <h3 className="font-bold text-text-primary mb-4 text-sm">
+                                월간 순자산 변동 (자산 - 부채)
+                            </h3>
+                            <ResponsiveContainer width="100%" height="100%" className="-ml-4">
+                                <AreaChart data={netWorthData}>
+                                    <defs>
+                                        <linearGradient
+                                            id="colorNetWorth"
+                                            x1="0"
+                                            y1="0"
+                                            x2="0"
+                                            y2="1">
+                                            <stop
+                                                offset="5%"
+                                                stopColor="#10B981"
+                                                stopOpacity={0.2}
+                                            />
+                                            <stop
+                                                offset="95%"
+                                                stopColor="#10B981"
+                                                stopOpacity={0}
+                                            />
+                                        </linearGradient>
+                                    </defs>
+                                    <CartesianGrid
+                                        strokeDasharray="3 3"
+                                        vertical={false}
+                                        stroke="#E5E7EB"
+                                    />
+                                    <XAxis
+                                        dataKey="date"
+                                        tick={{ fontSize: 11, fill: "#9CA3AF" }}
+                                        tickLine={false}
+                                        axisLine={false}
+                                        interval="preserveStartEnd"
+                                        minTickGap={30}
+                                    />
+                                    <YAxis
+                                        tick={{ fontSize: 11, fill: "#9CA3AF" }}
+                                        tickFormatter={val => `${(val / 10000).toFixed(0)}만`}
+                                        axisLine={false}
+                                        tickLine={false}
+                                        domain={["auto", "auto"]} // 값 변화가 잘 보이게 스케일 자동 조정
+                                    />
+                                    <Tooltip
+                                        contentStyle={{
+                                            borderRadius: "12px",
+                                            border: "none",
+                                            boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)",
+                                        }}
+                                        formatter={(value: any) => [
+                                            `${Number(value).toLocaleString()}원`,
+                                            "순자산",
+                                        ]}
+                                        labelStyle={{
+                                            color: "#374151",
+                                            fontWeight: "bold",
+                                            marginBottom: "4px",
+                                        }}
+                                    />
+                                    <Area
+                                        type="monotone"
+                                        dataKey="netWorth"
+                                        stroke="#10B981"
+                                        strokeWidth={3}
+                                        fillOpacity={1}
+                                        fill="url(#colorNetWorth)"
+                                    />
+                                </AreaChart>
+                            </ResponsiveContainer>
+                            <p className="text-center text-xs text-text-secondary mt-2">
+                                * 거래 내역과 투자 기록을 바탕으로 추산된 금액입니다.
+                            </p>
+                        </div>
+                    ) : (
+                        <div className="py-20 text-center text-text-secondary border border-dashed border-divider rounded-2xl">
+                            <span className="text-4xl block mb-2">📉</span>
+                            데이터가 부족하여 순자산을 계산할 수 없습니다.
+                        </div>
+                    )
                 ) : activeTab === "INVESTMENT" ? (
                     // ===============================================
                     // 📈 [투자 추이 차트] 영역

@@ -147,7 +147,7 @@ export default function BankDetailPage({ params }: { params: Promise<{ id: strin
         <div className="max-w-3xl mx-auto pb-10">
             {/* 2. 상단 헤더 영역 (개별 패딩 적용) */}
             {/* sticky top-0 등을 추가하면 스크롤 시 상단에 붙게 할 수도 있습니다 */}
-            <div className="px-5 py-4 flex items-center justify-between bg-background-default">
+            <div className="py-4 flex items-center justify-between bg-background-default">
                 <div className="flex items-center gap-4">
                     <Button
                         variant={"text"}
@@ -165,7 +165,7 @@ export default function BankDetailPage({ params }: { params: Promise<{ id: strin
             </div>
 
             {/* 3. 내부 메인 컨텐츠 영역 (여기에만 px-5 적용) */}
-            <div className="px-5 space-y-6">
+            <div className="space-y-6">
                 {/* 요약 카드 */}
                 <div className="bg-background-paper p-6 rounded-2xl border border-divider relative overflow-hidden">
                     <div className="flex justify-between items-start z-10 relative">

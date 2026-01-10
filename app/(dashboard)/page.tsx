@@ -58,7 +58,7 @@ export default function DashboardPage() {
                     ["flex", "flex-col", "justify-between", "gap-4"],
                     ["md:flex-row", "md:items-center"],
                 )}>
-                <div>
+                <div className={"py-4"}>
                     <h2 className="text-2xl font-bold text-text-primary">대시보드</h2>
                     <p className="text-text-secondary">나의 자산 현황입니다.</p>
                 </div>

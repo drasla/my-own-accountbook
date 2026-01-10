@@ -8,6 +8,7 @@ import { twMerge } from "tailwind-merge";
 import Sidebar from "@/components/layouts/SideBar";
 import Header from "@/components/layouts/Header";
 import { getCurrentUser } from "@/actions/user";
+import { ThemeProvider } from "@/components/providers/ThemeProvider";
 
 export const metadata: Metadata = {
     title: "Money Manager",
@@ -21,26 +22,28 @@ export default async function RootLayout({ children }: PropsWithChildren) {
 
     return (
         <html lang="ko">
-            <body className={twMerge(inter.className, ["bg-gray-50", "text-text-primary"])}>
-                <div className={twMerge(["flex", "min-h-screen"])}>
-                    <Sidebar />
-                    <main
-                        className={twMerge(
-                            ["flex-1", "flex", "flex-col", "min-w-0", "md:ml-64"],
-                            ["transition-all", "duration-300"],
-                        )}>
-                        <Header userName={user?.name} />
-                        <div
+            <body className={twMerge(inter.className, ["bg-background-default", "text-text-primary"])}>
+                <ThemeProvider>
+                    <div className={twMerge(["flex", "min-h-screen"])}>
+                        <Sidebar />
+                        <main
                             className={twMerge(
-                                ["flex-1", "w-full", "max-w-5xl", "mx-auto", "p-4", "pb-20"],
-                                ["md:p-8"],
+                                ["flex-1", "flex", "flex-col", "min-w-0", "md:ml-64"],
+                                ["transition-all", "duration-300"],
                             )}>
-                            {children}
-                        </div>
-                    </main>
-                    <BottomNav />
-                </div>
-                <ToastProvider />
+                            <Header userName={user?.name} />
+                            <div
+                                className={twMerge(
+                                    ["flex-1", "w-full", "max-w-5xl", "mx-auto", "pb-20"],
+                                    ["px-4", "md:px-8"],
+                                )}>
+                                {children}
+                            </div>
+                        </main>
+                        <BottomNav />
+                    </div>
+                    <ToastProvider />
+                </ThemeProvider>
             </body>
         </html>
     );

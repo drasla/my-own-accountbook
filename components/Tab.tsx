@@ -23,14 +23,9 @@ export function Tab({ value, label, children, className, ...props }: TabProps) {
             type="button"
             onClick={() => onChange(value)}
             className={twMerge(
-                // 기본 스타일
-                "relative py-3 px-4 text-sm font-medium transition-colors outline-none",
-                "border-b-2 hover:text-text-primary",
-
-                // 너비 설정
-                fullWidth ? "flex-1" : "min-w-[80px]",
-
-                // 활성 상태 스타일
+                ["relative", "py-3", "px-4", "text-sm", "font-medium", "cursor-pointer"],
+                ["transition-colors", "outline-none", "border-b-2", "hover:text-text-primary"],
+                fullWidth ? "flex-1" : "min-w-20",
                 isActive
                     ? "border-primary-main text-primary-main"
                     : "border-transparent text-text-secondary",

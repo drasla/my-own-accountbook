@@ -117,7 +117,7 @@ export default function AccountAnalytics({
     const PIE_COLORS = ["#10B981", "#EF4444"];
 
     return (
-        <div className="bg-background-paper rounded-2xl border border-divider p-5 shadow-sm">
+        <div className="bg-background-paper rounded-2xl border border-divider">
             {/* 헤더 */}
             <div className="flex items-center justify-between mb-6">
                 <h3 className="font-bold text-text-primary">자산 흐름 분석</h3>

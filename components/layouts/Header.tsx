@@ -21,7 +21,7 @@ export default function Header({ userName }: HeaderProps) {
             className={twMerge(
                 ["sticky", "top-0", "z-40", "h-16", "px-4"],
                 ["flex", "justify-between", "items-center"],
-                ["bg-white/80", "backdrop-blur-md", "border-b", "border-divider"],
+                ["bg-background-paper", "backdrop-blur-md", "border-b", "border-divider"],
             )}>
             <h2 className="text-lg font-bold text-text-primary md:hidden">나만의 가계부</h2>
 
@@ -30,7 +30,7 @@ export default function Header({ userName }: HeaderProps) {
 
             {/* 우측 유저 정보 및 로그아웃 */}
             <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2 text-sm text-text-primary bg-gray-100 px-3 py-1.5 rounded-full">
+                <div className="flex items-center gap-2 text-sm text-text-primary bg-primary-main px-3 py-1.5 rounded-full">
                     <div className="w-6 h-6 rounded-full bg-secondary-light flex items-center justify-center text-secondary-contrastText">
                         <MdPerson size={14} />
                     </div>
