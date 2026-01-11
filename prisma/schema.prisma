@@ -29,8 +29,9 @@ model User {
   categories         Category[]
   transactions       MoneyTransaction[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  dailyStats DailyStat[]
 }
 
 // ---------------------------------------------------------
@@ -211,4 +212,22 @@ enum InvestLogType {
   DEPOSIT // 투자금 투입 (시드 증가)
   WITHDRAW // 투자금 회수 (시드 감소)
   DIVIDEND // 배당금 추가
+}
+
+model DailyStat {
+  id     String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId String
+  date   DateTime // YYYY-MM-DD 00:00:00 기준
+
+  // 그 날 발생한 변동량
+  dailyIncome  Float @default(0) // 그 날의 수입 합계
+  dailyExpense Float @default(0) // 그 날의 지출 합계
+
+  // 그 날 마감 기준 잔액 (누적치)
+  // (투자 자산 제외, 순수 현금성 자산 + 부채 잔액)
+  closingBalance Float @default(0)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date]) // 유저별 날짜는 유일해야 함
 }

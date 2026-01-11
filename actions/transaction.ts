@@ -3,7 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "./user";
 import { revalidatePath } from "next/cache";
-import { TxType } from "@prisma/client";
+import { syncDailyStat, syncInvestmentStat } from "@/lib/sync";
 
 export async function createExpenseAction(data: any) {
     const user = await getCurrentUser();
@@ -13,11 +13,13 @@ export async function createExpenseAction(data: any) {
     // methodType: 'BANK' | 'CARD'
     const { paymentMethodId, methodType, amount, date, description, categoryId } = data;
     const numericAmount = parseFloat(amount);
+    const txDate = new Date(date);
 
     try {
         await prisma.$transaction(async tx => {
             // 1. 거래 내역 생성 (공통)
             const transactionData: any = {
+                userId: user.id,
                 type: "EXPENSE",
                 amount: numericAmount,
                 date: new Date(date),
@@ -48,6 +50,8 @@ export async function createExpenseAction(data: any) {
                     data: { currentBalance: { increment: numericAmount } },
                 });
             }
+
+            await syncDailyStat(user.id, txDate, numericAmount, "EXPENSE");
         });
 
         revalidatePath("/"); // 대시보드 갱신
@@ -64,6 +68,7 @@ export async function createBankTransactionAction(data: any) {
 
     const { bankAccountId, type, amount, date, description, categoryId, toAccountId } = data;
     const numericAmount = parseFloat(amount);
+    const txDate = new Date(date);
 
     if (!bankAccountId) return { success: false, message: "계좌 정보가 없습니다." };
 
@@ -146,6 +151,13 @@ export async function createBankTransactionAction(data: any) {
                             currentValuation: { increment: numericAmount },
                         },
                     });
+
+                    // 3. ✅ [핵심] 순자산 보존 로직
+                    // (1) 현금 통계에서는 '빠진 돈' 처리 (EXPENSE 취급하여 잔액 차감)
+                    await syncDailyStat(user.id, txDate, numericAmount, "EXPENSE");
+
+                    // (2) 투자 통계에서는 '들어온 돈' 처리 (미래 스냅샷 평가금 증가)
+                    await syncInvestmentStat(toAccountId, txDate, numericAmount);
                 } else {
                     throw new Error("받는 계좌 정보를 찾을 수 없습니다.");
                 }
@@ -167,17 +179,15 @@ export async function createBankTransactionAction(data: any) {
                     },
                 });
 
-                if (type === "INCOME") {
-                    await tx.bankAccount.update({
-                        where: { id: bankAccountId },
-                        data: { currentBalance: { increment: numericAmount } },
-                    });
-                } else {
-                    await tx.bankAccount.update({
-                        where: { id: bankAccountId },
-                        data: { currentBalance: { decrement: numericAmount } },
-                    });
-                }
+                const balanceUpdate =
+                    type === "INCOME" ? { increment: numericAmount } : { decrement: numericAmount };
+                await tx.bankAccount.update({
+                    where: { id: bankAccountId },
+                    data: { currentBalance: balanceUpdate },
+                });
+
+                // 일반 내역은 현금 자산 변동이므로 DailyStat 반영
+                await syncDailyStat(user.id, txDate, numericAmount, type);
                 // 기존 코드 끝
             }
         });
@@ -195,8 +205,9 @@ export async function updateTransactionAction(data: any) {
     const user = await getCurrentUser();
     if (!user) return { success: false, message: "로그인 필요" };
 
-    const { transactionId, amount, date, description, categoryId, type } = data;
+    const { transactionId, amount, date, description, categoryId } = data;
     const newAmount = parseFloat(amount);
+    const newDate = new Date(date);
 
     try {
         await prisma.$transaction(async tx => {
@@ -221,6 +232,16 @@ export async function updateTransactionAction(data: any) {
                     where: { id: oldTx.bankAccountId },
                     data: { currentBalance: { increment: oldTx.amount } },
                 });
+            }
+
+            // 2-2. ✅ [통계 원복] 기존 날짜, 기존 금액을 '반대 부호'로 동기화
+            if (!oldTx.isTransfer) {
+                await syncDailyStat(
+                    user.id,
+                    oldTx.date,
+                    -oldTx.amount, // 마이너스 처리하여 효과 제거
+                    oldTx.type as "INCOME" | "EXPENSE",
+                );
             }
 
             // 3. 새로운 내역으로 업데이트
@@ -248,6 +269,16 @@ export async function updateTransactionAction(data: any) {
                     where: { id: oldTx.bankAccountId },
                     data: { currentBalance: { decrement: newAmount } },
                 });
+            }
+
+            // 4-2. ✅ [새 통계 반영] 새로운 날짜, 새로운 금액으로 동기화
+            if (!oldTx.isTransfer) {
+                await syncDailyStat(
+                    user.id,
+                    newDate,
+                    newAmount,
+                    oldTx.type as "INCOME" | "EXPENSE",
+                );
             }
         });
 
@@ -289,7 +320,59 @@ export async function deleteTransactionAction(transactionId: string) {
                 });
             }
 
-            // 3. 내역 삭제
+            // 3. 통계 원복
+            // 일반 수입/지출인 경우
+            if (!oldTx.isTransfer) {
+                // 삭제는 반대 부호로 sync 호출
+                await syncDailyStat(
+                    user.id,
+                    oldTx.date,
+                    -oldTx.amount,
+                    oldTx.type as "INCOME" | "EXPENSE",
+                );
+            } else {
+                // 4. ✅ [투자 이체 삭제 처리]
+                // 은행 -> 투자로 보낸 내역(EXPENSE & isTransfer)인 경우
+                // 연결된 InvestmentLog를 찾아서 지우고, 투자금도 원복해야 함.
+                if (oldTx.type === "EXPENSE" && oldTx.isTransfer) {
+                    // 4-1. 연결된 투자 로그 찾기 (날짜, 금액, DEPOSIT 타입으로 추정)
+                    // (정확한 매칭을 위해선 Transaction 모델에 investmentLogId를 추가하는게 좋지만, 현재 구조상 추정)
+                    const relatedLog = await tx.investmentLog.findFirst({
+                        where: {
+                            date: oldTx.date,
+                            amount: oldTx.amount,
+                            type: "DEPOSIT",
+                        },
+                    });
+
+                    if (relatedLog) {
+                        // 4-2. 투자 계좌 잔액 원복 (입금 취소니까 뺌)
+                        await tx.investmentAccount.update({
+                            where: { id: relatedLog.investmentAccountId },
+                            data: {
+                                investedAmount: { decrement: oldTx.amount },
+                                currentValuation: { decrement: oldTx.amount },
+                            },
+                        });
+
+                        // 4-3. 투자 통계 원복 (스냅샷 감소)
+                        await syncInvestmentStat(
+                            relatedLog.investmentAccountId,
+                            oldTx.date,
+                            -oldTx.amount, // 마이너스 처리
+                        );
+
+                        // 4-4. 로그 삭제
+                        await tx.investmentLog.delete({ where: { id: relatedLog.id } });
+                    }
+
+                    // 4-5. 은행 관점에서의 '지출(이체)' 취소이므로, 현금 통계(DailyStat)도 원복해줘야 함
+                    // (이체를 취소했으니 내 현금 자산은 다시 늘어난 셈)
+                    await syncDailyStat(user.id, oldTx.date, -oldTx.amount, "EXPENSE");
+                }
+            }
+
+            // 4. 내역 삭제
             await tx.moneyTransaction.delete({
                 where: { id: transactionId },
             });

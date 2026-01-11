@@ -21,8 +21,12 @@ export default async function RootLayout({ children }: PropsWithChildren) {
     const user = await getCurrentUser();
 
     return (
-        <html lang="ko">
-            <body className={twMerge(inter.className, ["bg-background-default", "text-text-primary"])}>
+        <html lang="ko" suppressHydrationWarning={true}>
+            <body
+                className={twMerge(inter.className, [
+                    "bg-background-default",
+                    "text-text-primary",
+                ])}>
                 <ThemeProvider>
                     <div className={twMerge(["flex", "min-h-screen"])}>
                         <Sidebar />
