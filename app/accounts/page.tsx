@@ -81,10 +81,12 @@ export default function AccountsPage() {
                             banks.map((bank: any) => (
                                 <div
                                     key={bank.id}
-                                    // 은행 상세 페이지는 아직 없으므로 클릭 시 반응 없음 (추후 구현)
-                                    className="p-4 flex justify-between items-center hover:bg-background-default transition-colors">
+                                    onClick={() => router.push(`/bank/${bank.id}`)}
+                                    className="p-4 flex justify-between items-center hover:bg-background-default transition-colors cursor-pointer group">
                                     <div>
-                                        <p className="font-bold text-text-primary">{bank.name}</p>
+                                        <p className="font-bold text-text-primary group-hover:text-primary-main transition-colors">
+                                            {bank.name}
+                                        </p>
                                         <p className="text-xs text-text-secondary">
                                             {bank.type === "CHECKING"
                                                 ? "입출금"
@@ -93,9 +95,15 @@ export default function AccountsPage() {
                                                   : "현금"}
                                         </p>
                                     </div>
-                                    <span className="font-bold text-text-primary">
-                                        {bank.currentBalance.toLocaleString()}원
-                                    </span>
+                                    <div className="flex items-center gap-2">
+                                        <span className="font-bold text-text-primary">
+                                            {bank.currentBalance.toLocaleString()}원
+                                        </span>
+                                        <MdArrowForwardIos
+                                            size={12}
+                                            className="text-text-disabled"
+                                        />
+                                    </div>
                                 </div>
                             ))
                         ) : (
