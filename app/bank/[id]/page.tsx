@@ -7,19 +7,13 @@ import { getBankAccountDetail, deleteBankAccountAction } from "@/actions/bank";
 import Button from "@/components/Button";
 import Chip from "@/components/Chip";
 import AddTransactionModal from "@/components/transaction/AddTransactionModal";
-import {
-    MdArrowBack,
-    MdDelete,
-    MdAccountBalance,
-    MdAdd,
-    MdKeyboardArrowUp,
-    MdKeyboardArrowDown,
-} from "react-icons/md";
+import { MdArrowBack, MdDelete, MdAccountBalance, MdAdd } from "react-icons/md";
 import { BankAccount, MoneyTransaction, Category } from "@prisma/client";
-import dayjs from "dayjs";
 import "dayjs/locale/ko";
 import EditTransactionModal from "@/components/transaction/EditTransactionModal";
-import AccountAnalytics from "@/components/charts/AccountAnalytics"; // 한국어 설정 (필요시)
+import AccountAnalytics from "@/components/charts/AccountAnalytics";
+import DateRangeSelector from "@/components/common/DateRangeSelector";
+import dayjs from "@/lib/dayjs"; // 한국어 설정 (필요시)
 dayjs.locale("ko");
 
 interface BankDetail extends BankAccount {
@@ -35,24 +29,22 @@ export default function BankDetailPage({ params }: { params: Promise<{ id: strin
     const [account, setAccount] = useState<BankDetail | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isTxModalOpen, setIsTxModalOpen] = useState(false);
-    const [isDateOptionOpen, setIsDateOptionOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [selectedTx, setSelectedTx] = useState<any>(null);
 
     const [dateRange, setDateRange] = useState({
-        start: dayjs().startOf("month").format("YYYY-MM-DD"),
-        end: dayjs().endOf("month").format("YYYY-MM-DD"),
+        start: dayjs().startOf("month").toDate(), // Date 객체로 관리 권장
+        end: dayjs().endOf("day").toDate(),
     });
 
     const fetchData = async () => {
-        // 날짜가 아직 세팅 안 됐으면 실행 스킵 (useEffect 충돌 방지)
         if (!dateRange.start || !dateRange.end) return;
-
-        // 첫 로딩 외에는 로딩화면 생략 (자연스러운 갱신)
         if (!account) setIsLoading(true);
 
-        // Server Action에 날짜 전달
-        const data = await getBankAccountDetail(id, dateRange.start, dateRange.end);
+        const startStr = dayjs(dateRange.start).format("YYYY-MM-DD");
+        const endStr = dayjs(dateRange.end).format("YYYY-MM-DD");
+
+        const data = await getBankAccountDetail(id, startStr, endStr);
 
         if (!data) {
             toast.error("계좌 정보를 찾을 수 없습니다.");
@@ -77,37 +69,6 @@ export default function BankDetailPage({ params }: { params: Promise<{ id: strin
     const handleCloseModal = () => {
         setIsTxModalOpen(false);
         fetchData().then(() => {});
-    };
-
-    const moveMonth = (diff: number) => {
-        // 현재 선택된 '시작일'을 기준으로 달을 이동
-        const baseDate = dayjs(dateRange.start).add(diff, "month");
-
-        setDateRange({
-            start: baseDate.startOf("month").format("YYYY-MM-DD"),
-            end: baseDate.endOf("month").format("YYYY-MM-DD"),
-        });
-    };
-
-    const setTodayMonth = () => {
-        setDateRange({
-            start: dayjs().startOf("month").format("YYYY-MM-DD"),
-            end: dayjs().endOf("month").format("YYYY-MM-DD"),
-        });
-    };
-
-    const setLastWeek = () => {
-        setDateRange({
-            start: dayjs().subtract(7, "day").format("YYYY-MM-DD"),
-            end: dayjs().format("YYYY-MM-DD"),
-        });
-    };
-
-    const setThisYear = () => {
-        setDateRange({
-            start: dayjs().startOf("year").format("YYYY-MM-DD"),
-            end: dayjs().endOf("year").format("YYYY-MM-DD"),
-        });
     };
 
     const handleTxClick = (tx: any) => {
@@ -195,92 +156,11 @@ export default function BankDetailPage({ params }: { params: Promise<{ id: strin
                     </div>
                 </div>
 
-                {/* 3. 조회 기간 설정 영역 */}
-                <div className="bg-background-paper rounded-xl border border-divider overflow-hidden transition-all duration-300">
-                    {/* (1) 항상 보이는 날짜 입력부 */}
-                    <div className="p-4 flex items-end gap-2">
-                        <div className="flex-1">
-                            <label className="text-xs text-text-secondary font-bold mb-1 block">
-                                시작일
-                            </label>
-                            <input
-                                type="date"
-                                className="w-full p-2 bg-background-default border border-divider rounded-lg text-sm outline-none focus:border-primary-main"
-                                value={dateRange.start}
-                                onChange={e =>
-                                    setDateRange(prev => ({ ...prev, start: e.target.value }))
-                                }
-                            />
-                        </div>
-                        <span className="pb-2 text-text-secondary">~</span>
-                        <div className="flex-1">
-                            <label className="text-xs text-text-secondary font-bold mb-1 block">
-                                종료일
-                            </label>
-                            <input
-                                type="date"
-                                className="w-full p-2 bg-background-default border border-divider rounded-lg text-sm outline-none focus:border-primary-main"
-                                value={dateRange.end}
-                                onChange={e =>
-                                    setDateRange(prev => ({ ...prev, end: e.target.value }))
-                                }
-                            />
-                        </div>
-                    </div>
-
-                    {/* (2) 아코디언 토글 버튼 */}
-                    <button
-                        onClick={() => setIsDateOptionOpen(!isDateOptionOpen)}
-                        className="w-full py-2 flex items-center justify-center gap-1 text-xs font-medium text-text-secondary hover:bg-background-default transition-colors border-t border-divider">
-                        <span>간편 조회 옵션</span>
-                        {isDateOptionOpen ? (
-                            <MdKeyboardArrowUp size={16} />
-                        ) : (
-                            <MdKeyboardArrowDown size={16} />
-                        )}
-                    </button>
-
-                    {/* (3) 숨겨진 퀵 버튼들 */}
-                    {isDateOptionOpen && (
-                        <div className="px-4 pb-4 pt-2 bg-background-default/30 animate-in slide-in-from-top-2 fade-in duration-200">
-                            <div className="grid grid-cols-4 gap-2">
-                                {/* 지난달 */}
-                                <button
-                                    onClick={() => moveMonth(-1)}
-                                    className="px-3 py-2 bg-background-paper border border-divider rounded-lg text-xs hover:bg-primary-light/10 hover:border-primary-main transition-colors text-text-primary">
-                                    &lt; 이전달
-                                </button>
-
-                                {/* 이번달 */}
-                                <button
-                                    onClick={setTodayMonth}
-                                    className="col-span-2 px-3 py-2 bg-primary-main text-white rounded-lg text-xs font-bold hover:bg-primary-dark transition-colors shadow-sm">
-                                    이번 달 조회
-                                </button>
-
-                                {/* 다음달 */}
-                                <button
-                                    onClick={() => moveMonth(1)}
-                                    className="px-3 py-2 bg-background-paper border border-divider rounded-lg text-xs hover:bg-primary-light/10 hover:border-primary-main transition-colors text-text-primary">
-                                    다음달 &gt;
-                                </button>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-2 mt-2">
-                                <button
-                                    onClick={setLastWeek}
-                                    className="px-3 py-2 bg-background-paper border border-divider rounded-lg text-xs text-text-secondary hover:text-text-primary hover:bg-background-default transition-colors">
-                                    최근 1주일
-                                </button>
-                                <button
-                                    onClick={setThisYear}
-                                    className="px-3 py-2 bg-background-paper border border-divider rounded-lg text-xs text-text-secondary hover:text-text-primary hover:bg-background-default transition-colors">
-                                    올 해 전체 (1년)
-                                </button>
-                            </div>
-                        </div>
-                    )}
-                </div>
+                <DateRangeSelector
+                    startDate={dateRange.start}
+                    endDate={dateRange.end}
+                    onChange={(start, end) => setDateRange({ start, end })}
+                />
 
                 <div className="grid grid-cols-3 gap-3 animate-in fade-in slide-in-from-bottom-2 duration-500">
                     {/* (1) 수입 */}
@@ -329,8 +209,8 @@ export default function BankDetailPage({ params }: { params: Promise<{ id: strin
                     <div className="animate-in fade-in slide-in-from-bottom-3 duration-500 delay-100">
                         <AccountAnalytics
                             transactions={account.transactions}
-                            startDate={dateRange.start}
-                            endDate={dateRange.end}
+                            startDate={dateRange.start.toDateString()}
+                            endDate={dateRange.end.toDateString()}
                             currentBalance={account.currentBalance}
                         />
                     </div>

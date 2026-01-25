@@ -2,24 +2,18 @@
 
 import { useState, useEffect, use, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import dayjs from "dayjs";
 import toast from "react-hot-toast";
-
-// Actions
 import { deleteInvestmentAccountAction, getInvestmentDetail } from "@/actions/investment";
-
-// Components
 import InvestmentChart from "@/components/charts/InvetmentChart";
 import UpdateValuationModal from "@/components/investment/UpdateValuationModal";
 import AddInvestmentLogModal from "@/components/investment/AddInvestmentLogModal";
 import EditInvestmentLogModal from "@/components/investment/EditInvestmentLogModal";
-
-// Detail Components (Refactored)
 import InvestmentDetailHeader from "@/components/investment/detail/Header";
 import InvestmentOverviewCard from "@/components/investment/detail/OverviewCard";
-import PeriodSelector, { Period } from "@/components/investment/detail/PeriodSelector";
 import PerformanceSummary from "@/components/investment/detail/PerformanceSummary";
 import TransactionList from "@/components/investment/detail/TransactionList";
+import DateRangeSelector from "@/components/common/DateRangeSelector";
+import dayjs from "@/lib/dayjs";
 
 export default function InvestmentDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params);
@@ -28,10 +22,9 @@ export default function InvestmentDetailPage({ params }: { params: Promise<{ id:
     const [account, setAccount] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);
 
-    const [selectedPeriod, setSelectedPeriod] = useState<Period>("3M");
     const [dateRange, setDateRange] = useState({
-        start: dayjs().subtract(3, "month").format("YYYY-MM-DD"),
-        end: dayjs().endOf("day").format("YYYY-MM-DD"),
+        start: dayjs().subtract(3, "month").toDate(), // Date 객체로 관리 권장
+        end: dayjs().endOf("day").toDate(),
     });
 
     // Modals
@@ -42,10 +35,10 @@ export default function InvestmentDetailPage({ params }: { params: Promise<{ id:
 
     const fetchData = useCallback(async () => {
         setIsLoading(true);
-        const start = selectedPeriod === "ALL" ? undefined : dateRange.start;
-        const end = selectedPeriod === "ALL" ? undefined : dateRange.end;
+        const startStr = dayjs(dateRange.start).format("YYYY-MM-DD");
+        const endStr = dayjs(dateRange.end).format("YYYY-MM-DD");
 
-        const data = await getInvestmentDetail(id, start, end);
+        const data = await getInvestmentDetail(id, startStr, endStr);
         if (!data) {
             toast.error("계좌를 찾을 수 없습니다.");
             router.push("/");
@@ -53,26 +46,12 @@ export default function InvestmentDetailPage({ params }: { params: Promise<{ id:
         }
         setAccount(data);
         setIsLoading(false);
-    }, [id, router, dateRange, selectedPeriod]);
+    }, [id, router, dateRange]);
 
     // Fetch Data
     useEffect(() => {
         fetchData().then(() => {});
     }, [fetchData]);
-
-    // Handlers
-    const handlePeriodChange = (period: Period) => {
-        setSelectedPeriod(period);
-        const end = dayjs().format("YYYY-MM-DD");
-        let start = "";
-
-        if (period === "1M") start = dayjs().subtract(1, "month").format("YYYY-MM-DD");
-        else if (period === "3M") start = dayjs().subtract(3, "month").format("YYYY-MM-DD");
-        else if (period === "6M") start = dayjs().subtract(6, "month").format("YYYY-MM-DD");
-        else if (period === "1Y") start = dayjs().subtract(1, "year").format("YYYY-MM-DD");
-
-        setDateRange({ start, end });
-    };
 
     const handleDelete = async () => {
         if (confirm("정말 이 투자 계좌를 삭제하시겠습니까?")) {
@@ -104,7 +83,11 @@ export default function InvestmentDetailPage({ params }: { params: Promise<{ id:
                 />
 
                 {/* 3. Period Selector */}
-                <PeriodSelector selectedPeriod={selectedPeriod} onChange={handlePeriodChange} />
+                <DateRangeSelector
+                    startDate={dateRange.start}
+                    endDate={dateRange.end}
+                    onChange={(start, end) => setDateRange({ start, end })}
+                />
 
                 {/* 4. Chart */}
                 <div className="relative">

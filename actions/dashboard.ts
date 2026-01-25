@@ -2,90 +2,190 @@
 
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "./user";
-import { DashboardData } from "@/types";
-import dayjs from "dayjs";
+import dayjs from "@/lib/dayjs"; // ✅ Timezone 설정된 dayjs
 
-export async function getDashboardData(): Promise<DashboardData> {
+export async function getDashboardDataAction() {
     const user = await getCurrentUser();
+    if (!user) return null;
 
-    if (!user) {
-        return {
-            totalAssets: 0,
-            totalIncome: 0,
-            totalExpense: 0,
-            bankAccounts: [],
-            investmentAccounts: [],
-            cards: [],
-        };
-    }
+    // 1. 날짜 기준 설정 (KST 00:00 ~ 23:59)
+    const todayStart = dayjs().startOf("day").toDate();
+    const todayEnd = dayjs().endOf("day").toDate();
 
-    // dayjs로 이번 달 1일 ~ 말일 구하기
-    const startOfMonth = dayjs().startOf("month").toDate();
-    const endOfMonth = dayjs().endOf("month").toDate();
+    // 어제 범위 (투자 변동분 계산용)
+    const yesterdayStart = dayjs().subtract(1, "day").startOf("day").toDate();
+    const yesterdayEnd = dayjs().subtract(1, "day").endOf("day").toDate();
 
-    try {
-        // ✅ 4가지 데이터를 병렬로 동시에 조회 (성능 최적화 유지)
-        const [bankAccounts, investmentAccounts, cards, monthlyTransactions] = await Promise.all([
-            // 1. 은행/현금 계좌
+    // 차트 조회 시작일 (최근 7일)
+    const chartStartDate = dayjs().subtract(7, "day").startOf("day").toDate();
+
+    // 2. 데이터 병렬 조회
+    const [banks, cards, investments, dailyStats, investSnapshots, todaysTransactions] =
+        await Promise.all([
+            // (A) 자산 및 부채 현재 잔액
             prisma.bankAccount.findMany({
                 where: { userId: user.id },
-                orderBy: { currentBalance: "desc" },
+                orderBy: { createdAt: "asc" },
             }),
-            // 2. 투자 계좌
+            prisma.card.findMany({ where: { userId: user.id }, orderBy: { createdAt: "asc" } }),
+
+            // (B) 투자 자산 (어제 스냅샷 포함 -> 일간 변동 계산용)
             prisma.investmentAccount.findMany({
                 where: { userId: user.id },
-                orderBy: { currentValuation: "desc" },
+                include: {
+                    investmentSnapshots: {
+                        where: { date: { gte: yesterdayStart, lte: yesterdayEnd } },
+                        take: 1,
+                    },
+                },
+                orderBy: { createdAt: "asc" },
             }),
-            // 3. 카드 (모델명 Card 확인)
-            prisma.card.findMany({
-                where: { userId: user.id },
-                orderBy: { createdAt: "desc" },
+
+            // (C) 차트용 과거 데이터
+            prisma.dailyStat.findMany({
+                where: { userId: user.id, date: { gte: chartStartDate } },
+                orderBy: { date: "asc" },
             }),
-            // 4. ✅ 통계용 이번 달 거래 내역 (이체 제외!)
+            prisma.investmentSnapshot.findMany({
+                where: { investmentAccount: { userId: user.id }, date: { gte: chartStartDate } },
+                orderBy: { date: "asc" },
+            }),
+
+            // (D) 오늘의 거래 내역
+            // ✅ [수정] 1차 date(거래일), 2차 createdAt(입력순) 내림차순 정렬
             prisma.moneyTransaction.findMany({
                 where: {
                     userId: user.id,
-                    date: { gte: startOfMonth, lte: endOfMonth },
-                    isTransfer: false, // 이체 제외 핵심 로직
+                    date: { gte: todayStart, lte: todayEnd },
                 },
-                select: { type: true, amount: true }, // 통계에 필요한 필드만 가져옴 (최적화)
+                orderBy: [{ date: "desc" }, { createdAt: "desc" }],
+                // ✅ [수정] 통장명, 카드명, 카테고리명 포함
+                include: {
+                    bankAccount: { select: { name: true } },
+                    card: { select: { name: true } },
+                    category: { select: { name: true } },
+                },
             }),
         ]);
 
-        // 자산 합계 계산
-        const totalBankBalance = bankAccounts.reduce((sum, acc) => sum + acc.currentBalance, 0);
-        const totalInvestmentValue = investmentAccounts.reduce(
-            (sum, acc) => sum + acc.currentValuation,
-            0,
-        );
-        const totalAssets = totalBankBalance + totalInvestmentValue;
+    // 3. 자산 요약 (Summary)
+    const currentCash = banks.reduce((sum, b) => sum + b.currentBalance, 0);
+    const currentDebt = cards.reduce((sum, c) => sum + c.currentBalance, 0);
+    const currentInvest = investments.reduce((sum, i) => sum + i.currentValuation, 0);
+    const currentNetWorth = currentCash + currentInvest - currentDebt;
 
-        // ✅ 수입/지출 합계 계산 (서버에서 계산해서 내려주는 게 클라이언트 부하 감소)
-        const totalIncome = monthlyTransactions
-            .filter(t => t.type === "INCOME")
-            .reduce((sum, t) => sum + t.amount, 0);
+    // 4. Sparkline 차트 데이터 생성 (최근 7일)
+    const historyMap = new Map<string, { cash: number; invest: number }>();
 
-        const totalExpense = monthlyTransactions
-            .filter(t => t.type === "EXPENSE")
-            .reduce((sum, t) => sum + t.amount, 0);
+    dailyStats.forEach(stat => {
+        const key = dayjs(stat.date).tz().format("YYYY-MM-DD");
+        const curr = historyMap.get(key) || { cash: 0, invest: 0 };
+        curr.cash = stat.closingBalance;
+        historyMap.set(key, curr);
+    });
 
-        return {
-            totalAssets,
-            totalIncome,
-            totalExpense,
-            bankAccounts,
-            investmentAccounts,
-            cards,
-        };
-    } catch (error) {
-        console.error("Dashboard Data Error:", error);
-        return {
-            totalAssets: 0,
-            totalIncome: 0,
-            totalExpense: 0,
-            bankAccounts: [],
-            investmentAccounts: [],
-            cards: [],
-        };
+    investSnapshots.forEach(snap => {
+        const key = dayjs(snap.date).tz().format("YYYY-MM-DD");
+        const curr = historyMap.get(key) || { cash: 0, invest: 0 };
+        curr.invest += snap.totalValue;
+        historyMap.set(key, curr);
+    });
+
+    const chartData = [];
+    for (let i = 6; i >= 0; i--) {
+        const d = dayjs().subtract(i, "day");
+        const key = d.format("YYYY-MM-DD");
+
+        if (i === 0) {
+            chartData.push({
+                date: key,
+                netWorth: currentNetWorth,
+                cash: currentCash - currentDebt,
+                invest: currentInvest,
+            });
+        } else {
+            const data = historyMap.get(key);
+            const cashVal = data?.cash || 0;
+            const investVal = data?.invest || 0;
+            chartData.push({
+                date: key,
+                netWorth: cashVal + investVal,
+                cash: cashVal,
+                invest: investVal,
+            });
+        }
     }
+
+    // 5. 어제 대비 순자산 증감
+    const todayData = chartData[chartData.length - 1];
+    const yesterdayData = chartData[chartData.length - 2] || todayData;
+
+    const diff = {
+        netWorth: todayData.netWorth - yesterdayData.netWorth,
+        cash: todayData.cash - yesterdayData.cash,
+        invest: todayData.invest - yesterdayData.invest,
+    };
+
+    // 6. [핵심 수정] 투자 계좌별 '수익금 변동' 및 '수익률 변화(%p)' 계산
+    const investmentPerformance = investments
+        .map(account => {
+            const yesterdaySnapshot = account.investmentSnapshots[0];
+
+            // (A) 오늘 상태
+            const currentProfit = account.currentValuation - account.investedAmount;
+            const currentROI =
+                account.investedAmount === 0 ? 0 : (currentProfit / account.investedAmount) * 100;
+
+            // (B) 어제 상태 (스냅샷 활용)
+            let yesterdayProfit = 0;
+            let yesterdayROI = 0;
+
+            if (yesterdaySnapshot) {
+                yesterdayProfit = yesterdaySnapshot.totalValue - yesterdaySnapshot.investedAmount;
+                yesterdayROI =
+                    yesterdaySnapshot.investedAmount === 0
+                        ? 0
+                        : (yesterdayProfit / yesterdaySnapshot.investedAmount) * 100;
+            } else {
+                // 어제 데이터 없으면 오늘과 동일하게 처리 (변동 0)
+                yesterdayProfit = currentProfit;
+                yesterdayROI = currentROI;
+            }
+
+            // (C) 변동 계산
+            // 1. 수익금 증감액 (오늘 수익 - 어제 수익)
+            const dailyProfitChange = currentProfit - yesterdayProfit;
+
+            // 2. 수익률 변화량 (오늘 수익률 - 어제 수익률) -> %p 단위
+            const roiChange = currentROI - yesterdayROI;
+
+            return {
+                id: account.id,
+                name: account.name,
+                currentValuation: account.currentValuation,
+
+                // UI용 데이터
+                dailyChange: dailyProfitChange, // 수익금 변동 (원)
+                dailyChangeRate: roiChange, // 수익률 변동 (%p)
+            };
+        })
+        .sort((a, b) => b.dailyChange - a.dailyChange); // 수익금 많이 늘어난 순 정렬
+
+    return {
+        summary: {
+            currentNetWorth,
+            currentCash,
+            currentDebt,
+            currentInvest,
+        },
+        diff,
+        chartData,
+        accounts: {
+            banks,
+            cards,
+            investments,
+        },
+        todaysTransactions,
+        investmentPerformance,
+    };
 }

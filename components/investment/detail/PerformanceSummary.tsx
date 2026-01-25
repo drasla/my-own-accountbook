@@ -8,7 +8,7 @@ interface Props {
     snapshots: any[];
     currentValuation: number;
     currentInvestedAmount: number;
-    dateRange: { start: string; end: string };
+    dateRange: { start: Date; end: Date };
     createdAt: string;
 }
 
@@ -55,11 +55,10 @@ export default function PerformanceSummary({
     // 3. 순수 평가 손익 (Market PnL)
     // 총 수익 증가분에서 배당으로 인한 증가분을 뺌 -> 순수 주가 상승분만 남음
     const marketProfit = totalProfitDelta - periodDividend;
-    const isMarketProfitPositive = marketProfit >= 0;
 
     // 4. 총 자산 변동 (단순 비교)
     // 시작 스냅샷이 없으면(신규), 0원에서 현재 금액이 된 것이므로 현재 금액 전체가 변동분
-    const totalValuationChange = snapshots.length > 0 ? endVal - startVal : endVal - 0;
+    const totalValuationChange = snapshots.length > 0 ? endVal - startVal : endVal;
     const roiChange = endRoi - startRoi;
 
     const moneyFmt = (num: number) => (isNaN(num) ? "0" : Math.floor(num).toLocaleString());

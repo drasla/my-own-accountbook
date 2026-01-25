@@ -5,7 +5,7 @@ import { useForm, SubmitHandler, Controller } from "react-hook-form";
 import toast from "react-hot-toast";
 import Modal from "@/components/Modal";
 import Input from "@/components/Input";
-import Select from "@/components/Select"; // Shared Select
+import Select from "@/components/Select";
 import Button from "@/components/Button";
 import { Tabs } from "@/components/Tabs";
 import {
@@ -15,7 +15,7 @@ import {
 } from "@/actions/create_assets";
 import { BankType, InvestType, CardType } from "@prisma/client";
 import { Tab } from "@/components/Tab";
-import { getDashboardData } from "@/actions/dashboard";
+import { getBankOptionsAction } from "@/actions/bank";
 
 interface Props {
     isOpen: boolean;
@@ -53,8 +53,8 @@ export default function CreateAssetModal({ isOpen, onClose }: Props) {
 
     useEffect(() => {
         if (isOpen) {
-            getDashboardData().then(data => {
-                const options = data.bankAccounts.map((b: any) => ({
+            getBankOptionsAction().then(banks => {
+                const options = banks.map(b => ({
                     label: `${b.name} (잔액: ${b.currentBalance.toLocaleString()}원)`,
                     value: b.id,
                 }));

@@ -15,6 +15,7 @@ import {
 import NetWorthTab from "@/components/stats/NetWorthTab";
 import InvestmentTab from "@/components/stats/InvestmentTab";
 import CategoryPieTab from "@/components/stats/CategoryPieTab";
+import DateRangeSelector from "@/components/common/DateRangeSelector";
 
 type TabType = "EXPENSE" | "INCOME" | "INVESTMENT" | "NET_WORTH";
 
@@ -74,53 +75,11 @@ export default function StatsPage() {
             <header className="py-4 bg-background-default sticky top-0 z-10 flex flex-col gap-4">
                 <h1 className="text-xl font-bold text-text-primary">통계</h1>
 
-                {/* 기간 선택기 */}
-                <div className="bg-background-paper p-4 rounded-2xl border border-divider shadow-sm space-y-3">
-                    <div className="flex items-center gap-2">
-                        <div className="flex-1 relative">
-                            <input
-                                type="date"
-                                className="w-full bg-background-default border border-divider rounded-lg p-2 text-sm font-bold text-text-primary outline-none focus:border-primary-main"
-                                value={dayjs(dateRange.startDate).format("YYYY-MM-DD")}
-                                onChange={e =>
-                                    setDateRange(prev => ({
-                                        ...prev,
-                                        startDate: new Date(e.target.value),
-                                    }))
-                                }
-                            />
-                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-text-disabled pointer-events-none text-xs">
-                                부터
-                            </span>
-                        </div>
-                        <span className="text-text-disabled">~</span>
-                        <div className="flex-1 relative">
-                            <input
-                                type="date"
-                                className="w-full bg-background-default border border-divider rounded-lg p-2 text-sm font-bold text-text-primary outline-none focus:border-primary-main"
-                                value={dayjs(dateRange.endDate).format("YYYY-MM-DD")}
-                                onChange={e =>
-                                    setDateRange(prev => ({
-                                        ...prev,
-                                        endDate: new Date(e.target.value),
-                                    }))
-                                }
-                            />
-                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-text-disabled pointer-events-none text-xs">
-                                까지
-                            </span>
-                        </div>
-                    </div>
-
-                    {/* 퀵 버튼 그룹 */}
-                    <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
-                        <QuickButton label="이번달" onClick={handleThisMonth} />
-                        <QuickButton label="1개월" onClick={() => handleQuickRange(1)} />
-                        <QuickButton label="3개월" onClick={() => handleQuickRange(3)} />
-                        <QuickButton label="6개월" onClick={() => handleQuickRange(6)} />
-                        <QuickButton label="1년" onClick={() => handleQuickRange(12)} />
-                    </div>
-                </div>
+                <DateRangeSelector
+                    startDate={dateRange.startDate}
+                    endDate={dateRange.endDate}
+                    onChange={(start, end) => setDateRange({ startDate: start, endDate: end })}
+                />
 
                 {/* 탭 메뉴 */}
                 <Tabs value={activeTab} onChange={val => setActiveTab(val as TabType)} fullWidth>

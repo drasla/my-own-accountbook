@@ -38,7 +38,7 @@ export default async function RootLayout({ children }: PropsWithChildren) {
                             <Header userName={user?.name} />
                             <div
                                 className={twMerge(
-                                    ["flex-1", "w-full", "max-w-5xl", "mx-auto", "pb-20"],
+                                    ["flex-1", "w-full", "mx-auto", "pb-20"],
                                     ["px-4", "md:px-8"],
                                 )}>
                                 {children}

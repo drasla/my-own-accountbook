@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "./user";
 import { revalidatePath } from "next/cache";
 import { InvestType } from "@prisma/client";
+import dayjs from "@/lib/dayjs";
 
 export async function getBankAccountDetail(
     accountId: string,
@@ -14,6 +15,12 @@ export async function getBankAccountDetail(
     if (!user) throw new Error("로그인이 필요합니다.");
 
     try {
+        const start = startDate
+            ? dayjs.tz(startDate, "Asia/Seoul").startOf("day").toDate()
+            : undefined;
+
+        const end = endDate ? dayjs.tz(endDate, "Asia/Seoul").endOf("day").toDate() : undefined;
+
         return await prisma.bankAccount.findUnique({
             where: {
                 id: accountId,
@@ -24,13 +31,11 @@ export async function getBankAccountDetail(
                 transactions: {
                     where: {
                         date: {
-                            gte: startDate ? new Date(startDate) : undefined,
-                            lte: endDate ? new Date(endDate) : undefined,
+                            gte: start,
+                            lte: end,
                         },
                     },
-                    orderBy: {
-                        date: "desc",
-                    },
+                    orderBy: [{ date: "desc" }, { createdAt: "desc" }],
                     include: {
                         category: true, // 카테고리 정보 포함
                     },
@@ -120,5 +125,26 @@ export async function deleteBankAccountAction(accountId: string) {
     } catch (error) {
         console.error("Delete Bank Error:", error);
         return { success: false, message: "삭제 중 오류가 발생했습니다." };
+    }
+}
+
+export async function getBankOptionsAction() {
+    const user = await getCurrentUser();
+    if (!user) return [];
+
+    try {
+        const banks = await prisma.bankAccount.findMany({
+            where: { userId: user.id },
+            select: {
+                id: true,
+                name: true,
+                currentBalance: true,
+            },
+            orderBy: { createdAt: "desc" },
+        });
+
+        return banks;
+    } catch (error) {
+        return [];
     }
 }
